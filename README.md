@@ -1,7 +1,18 @@
 # Share Spreadsheet Generator
-Pull stock/share data from Yahoo Finance (including dividend data) and build an Excel spreadsheet. 
+Pull stock/share data from Yahoo Finance (including dividend data) and build an Excel spreadsheet.
 
-Usage:
+## Modules required
+There are a number of modules required in order to run the script. These are:
+yfinance
+pandas
+openpyxl
+
+You can install these with python pip:
+```
+pip install <module name>
+```
+
+## Usage
 Add ticker symbols for companies by adding them to a csv file, including number of shares (I have added an example CSV):
 ```
 ANZ.AX,100
