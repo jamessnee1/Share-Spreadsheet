@@ -3,9 +3,9 @@ This script pulls stock/share data from Yahoo Finance (including dividend data) 
 
 ## Modules required
 There are a number of modules required in order to run the script. These are:
-yfinance
-pandas
-openpyxl
+- yfinance
+- pandas
+- openpyxl
 
 You can install these with python pip:
 ```
