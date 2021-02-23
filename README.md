@@ -1,5 +1,5 @@
 # Share Spreadsheet Generator
-This script pulls stock/share data from Yahoo Finance (including dividend data) and build an Excel spreadsheet. This is especially handy to track your investments.
+This script pulls stock/share data from Yahoo Finance (including dividend data) and build an Excel spreadsheet. This is especially handy to track your investments for tax purposes.
 
 ## Modules required
 There are a number of modules required in order to run the script. These are:
