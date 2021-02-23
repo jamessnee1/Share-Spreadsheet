@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-import datetime
+from datetime import datetime
 import yfinance as yf
 import math
 import pandas as pd
@@ -9,30 +9,17 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
-#Format: Ticker Symbol, Number of shares
-AUS_TICKERS = {
-"ANZ.AX" : 48,
-"APA.AX" : 45,
-"APT.AX" : 76,
-"ARF.AX" : 230,
-"BOQ.AX" : 77,
-"BSL.AX" : 188,
-"CBA.AX" : 29,
-"DTS.AX" : 3333,
-"FMG.AX" : 200,
-"GEM.AX" : 500,
-"PL8.AX" : 1351,
-"RMD.AX" : 20,
-"VHY.AX" : 9,
-"Z1P.AX" : 262,
-"AGNC" : 3,
-"AMC" : 1,
-"GAIN" : 6,
-"GPRO" : 1,
-"ORC" : 13,
-"PSEC" : 10,
-"STAG" : 1
-}
+#Format of stock file: Ticker Symbol, Number of shares
+
+def loadTickerFile(fileName):
+    TICKERS = {}
+    print("Loading stocks file...")
+    with open(fileName, "r") as fileHandler:
+        for line in fileHandler:
+            fileLine = line.split(",")
+            TICKERS[fileLine[0]] = int(fileLine[1])
+        fileHandler.close()
+    return TICKERS
 
 def writeTitle(ws, title, width, column):
     cell = column + "1"
@@ -44,14 +31,15 @@ def writeTitle(ws, title, width, column):
 def writeData(ws, row, column, value):
     ws.cell(row=row, column=column, value=str(value))
     
-
+AUS_TICKERS = loadTickerFile("exampleStockFile.csv")
 #Debugging
 #print(AUS_TICKERS)
 
-start = datetime.datetime.now()
+start = datetime.now()
 
 #Create excel
-wb = Workbook()  
+wb = Workbook()
+wb.guess_types = True
 ws = wb.active
 strDate = start.strftime("%d_%m_%Y")
 dest_filename = 'SharePortfolio_' + strDate + '.xlsx'
@@ -114,29 +102,38 @@ for company in AUS_TICKERS:
     except KeyError: exDate = "N/A"
     except TypeError: exDate = "N/A"
     
+    if exDate != "N/A":
+        #convert to proper date
+        dateComponents = str(exDate).split(" ")
+        exDate = dateComponents[0]
+    
+    
     #Data from API
     writeData(ws, rowCount, 1, longName)
     writeData(ws, rowCount, 2, company)
     writeData(ws, rowCount, 3, sector)
-    writeData(ws, rowCount, 4, "$" + str(marketPrice))
+    writeData(ws, rowCount, 4, float(marketPrice))
     writeData(ws, rowCount, 5, str(AUS_TICKERS[company]))
-    writeData(ws, rowCount, 6, "$" + str(totalShareValue))
-    writeData(ws, rowCount, 7, "$" + str(lastDividendValue))
-    writeData(ws, rowCount, 8, str(dividendYield))
-    writeData(ws, rowCount, 9, str(exDate))
-    writeData(ws, rowCount, 10, "$" + str(estimatedIncome))
+    writeData(ws, rowCount, 6, float(totalShareValue))
+    writeData(ws, rowCount, 7, float(lastDividendValue))
+    writeData(ws, rowCount, 8, float(dividendYield))
+    writeData(ws, rowCount, 9, exDate)
+    writeData(ws, rowCount, 10, float(estimatedIncome))
     rowCount = rowCount + 1
 
 #Write totals to spreadsheet
 writeData(ws, rowCount, 1, "TOTAL:")
 writeData(ws, rowCount, 5, totalNumOfShares)
-writeData(ws, rowCount, 6, "$" + str(totalPortfolioValue))
-writeData(ws, rowCount, 10, "$" + str(totalDividendIncome))
+writeData(ws, rowCount, 6, float(totalPortfolioValue))
+writeData(ws, rowCount, 10, float(totalDividendIncome))
 
 #Save spreadsheet
 wb.save(filename = dest_filename)
 
-end = datetime.datetime.now()
+end = datetime.now()
 elapsed = end - start
 
 print("Script took " + str(elapsed) + " to execute")
+
+#Open excel file
+os.startfile(dest_filename)
