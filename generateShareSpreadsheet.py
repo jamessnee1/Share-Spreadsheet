@@ -4,10 +4,12 @@ import time
 import datetime
 import yfinance as yf
 import math
+import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
+#Format: Ticker Symbol, Number of shares
 AUS_TICKERS = {
 "ANZ.AX" : 48,
 "APA.AX" : 45,
@@ -22,12 +24,29 @@ AUS_TICKERS = {
 "PL8.AX" : 1351,
 "RMD.AX" : 20,
 "VHY.AX" : 9,
-"Z1P.AX" : 262
+"Z1P.AX" : 262,
+"AGNC" : 3,
+"AMC" : 1,
+"GAIN" : 6,
+"GPRO" : 1,
+"ORC" : 13,
+"PSEC" : 10,
+"STAG" : 1
 }
+
+def writeTitle(ws, title, width, column):
+    cell = column + "1"
+    ws.column_dimensions[column].width = width
+    ws[cell] = title
+    ws[cell].font = Font(bold=True)
+    
+
+def writeData(ws, row, column, value):
+    ws.cell(row=row, column=column, value=str(value))
+    
 
 #Debugging
 #print(AUS_TICKERS)
-
 
 start = datetime.datetime.now()
 
@@ -36,35 +55,23 @@ wb = Workbook()
 ws = wb.active
 strDate = start.strftime("%d_%m_%Y")
 dest_filename = 'SharePortfolio_' + strDate + '.xlsx'
+
+#If file exists, delete it
+if os.path.exists(dest_filename):
+    os.remove(dest_filename)
+    
 ws.title = "Shares " + start.strftime("%d_%m_%Y")
 #Write excel column headers
-ws.column_dimensions['A'].width = 55
-ws.column_dimensions['B'].width = 25
-ws.column_dimensions['C'].width = 25
-ws.column_dimensions['D'].width = 25
-ws.column_dimensions['E'].width = 25
-ws.column_dimensions['F'].width = 25
-ws.column_dimensions['G'].width = 25
-ws.column_dimensions['H'].width = 25
-ws.column_dimensions['I'].width = 25
-ws['A1'] = "Company Name"
-ws['B1'] = "Sector"
-ws['C1'] = "Current Market Price"
-ws['D1'] = "Number of shares"
-ws['E1'] = "Total share value"
-ws['F1'] = "Last dividend per share"
-ws['G1'] = "Dividend yield"
-ws['H1'] = "Ex-dividend date"
-ws['I1'] = "Estimated Income"
-ws['A1'].font = Font(bold=True)
-ws['B1'].font = Font(bold=True)
-ws['C1'].font = Font(bold=True)
-ws['D1'].font = Font(bold=True)
-ws['E1'].font = Font(bold=True)
-ws['F1'].font = Font(bold=True)
-ws['G1'].font = Font(bold=True)
-ws['H1'].font = Font(bold=True)
-ws['I1'].font = Font(bold=True)
+writeTitle(ws, "Company Name", 55, "A")
+writeTitle(ws, "Ticker Symbol", 12, "B")
+writeTitle(ws, "Sector", 25, "C")
+writeTitle(ws, "Current Market Price (ask)", 25, "D")
+writeTitle(ws, "Number of shares", 25, "E")
+writeTitle(ws, "Total share value", 25, "F")
+writeTitle(ws, "Last dividend per share", 25, "G")
+writeTitle(ws, "Dividend yield", 25, "H")
+writeTitle(ws, "Ex-dividend date", 25, "I")
+writeTitle(ws, "Estimated Income", 25, "J")
     
 print("Downloading stock data from Yahoo Finance...")
 rowCount = 2
@@ -77,6 +84,7 @@ for company in AUS_TICKERS:
     print("Getting data for " + company)
     ticker = yf.Ticker(company)
     #print("next event: " + str(ticker.calendar))
+    #print(ticker.dividends)
     
     try:
         sector = str(ticker.info['sector'])
@@ -84,7 +92,7 @@ for company in AUS_TICKERS:
     
     longName = str(ticker.info['longName'])
     lastDividendValue = str(ticker.info['lastDividendValue'])
-    marketPrice = str(ticker.info['regularMarketPrice'])
+    marketPrice = str(ticker.info['ask'])
     dividendYield = str(ticker.info['dividendYield'])
     
     if dividendYield == 'None':
@@ -94,34 +102,38 @@ for company in AUS_TICKERS:
         lastDividendValue = 0.00
         
         
-    estimatedIncome = round(float(AUS_TICKERS[company]) * float(lastDividendValue))
-    totalDividendIncome = round(totalDividendIncome + estimatedIncome)
+    estimatedIncome = round(float(AUS_TICKERS[company]) * float(lastDividendValue), 3)
+    totalDividendIncome = round(totalDividendIncome + estimatedIncome, 3)
     
-    totalShareValue = round(float(AUS_TICKERS[company]) * float(marketPrice))
+    totalShareValue = round(float(AUS_TICKERS[company]) * float(marketPrice), 3)
     totalNumOfShares = round(totalNumOfShares + AUS_TICKERS[company])
-    totalPortfolioValue = round(totalPortfolioValue + totalShareValue)
+    totalPortfolioValue = round(totalPortfolioValue + totalShareValue, 3)
+    
+    try:
+        exDate = ticker.calendar['Value'][0]
+    except KeyError: exDate = "N/A"
+    except TypeError: exDate = "N/A"
     
     #Data from API
-    ws.cell(row=rowCount, column=1, value=str(longName))
-    ws.cell(row=rowCount, column=2, value=str(sector))
-    ws.cell(row=rowCount, column=3, value="$" + str(marketPrice))
-    ws.cell(row=rowCount, column=4, value=str(AUS_TICKERS[company]))
-    ws.cell(row=rowCount, column=5, value="$" + str(totalShareValue))
-    ws.cell(row=rowCount, column=6, value="$" + str(lastDividendValue))
-    yieldColumn = ws.cell(rowCount, 7)
-    yieldColumn.number_format = '0.00%'
-    yieldColumn.value=str(dividendYield)
-    #ws.cell(row=rowCount, column=7, value=str(dividendYield))
-    ws.cell(row=rowCount, column=9,value="$" + str(estimatedIncome))
+    writeData(ws, rowCount, 1, longName)
+    writeData(ws, rowCount, 2, company)
+    writeData(ws, rowCount, 3, sector)
+    writeData(ws, rowCount, 4, "$" + str(marketPrice))
+    writeData(ws, rowCount, 5, str(AUS_TICKERS[company]))
+    writeData(ws, rowCount, 6, "$" + str(totalShareValue))
+    writeData(ws, rowCount, 7, "$" + str(lastDividendValue))
+    writeData(ws, rowCount, 8, str(dividendYield))
+    writeData(ws, rowCount, 9, str(exDate))
+    writeData(ws, rowCount, 10, "$" + str(estimatedIncome))
     rowCount = rowCount + 1
 
 #Write totals to spreadsheet
-ws.cell(row=rowCount, column=1, value=str("TOTAL:"))
-ws.cell(row=rowCount, column=4, value=str(totalNumOfShares))
-ws.cell(row=rowCount, column=5, value="$" + str(totalPortfolioValue))
-ws.cell(row=rowCount, column=9,value="$" + str(totalDividendIncome))
+writeData(ws, rowCount, 1, "TOTAL:")
+writeData(ws, rowCount, 5, totalNumOfShares)
+writeData(ws, rowCount, 6, "$" + str(totalPortfolioValue))
+writeData(ws, rowCount, 10, "$" + str(totalDividendIncome))
 
-print("Saving spreadsheet...")
+#Save spreadsheet
 wb.save(filename = dest_filename)
 
 end = datetime.datetime.now()
